@@ -131,6 +131,13 @@ IF OBJECT_ID(N'IsBmstuUser') IS NOT NULL
 GO
 
 
+CREATE FUNCTION Func1
+  (@userEmail AS nvarchar(120))
+  RETURNS bit
+AS
+  RETURN 1;
+GO
+
 CREATE FUNCTION IsBmstuUser
   (@userEmail AS nvarchar(120))
   RETURNS bit
@@ -186,6 +193,18 @@ GO
 
 
 CREATE FUNCTION GetUsersWithRegDate()
+RETURNS table
+AS
+  RETURN (
+    SELECT 
+      UserName, 
+      CAST(RegistrationDate AS DATE) AS RegDate
+    FROM [User]
+  );
+GO
+
+
+CREATE FUNCTION GetUsersWithRegDate2()
 RETURNS table
 AS
   RETURN (

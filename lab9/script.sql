@@ -1,0 +1,294 @@
+USE master
+GO
+
+IF DB_ID('Lab9') IS NOT NULL
+  DROP DATABASE Lab9;
+
+CREATE DATABASE Lab9;
+GO
+
+USE Lab9;
+GO
+
+
+IF OBJECT_ID(N'User') IS NOT NULL
+  DROP TABLE [User]
+GO
+
+
+CREATE TABLE [User](
+  UserId int PRIMARY KEY IDENTITY(1, 1),
+  Email nvarchar(120) UNIQUE NOT NULL,
+  UserName nvarchar(120) UNIQUE NOT NULL,
+  RegistrationDate datetime DEFAULT CURRENT_TIMESTAMP,
+  About text NULL
+)
+GO
+
+
+INSERT INTO [User](Email, UserName)
+    VALUES
+  (N'anonymous@example.com', N'anonymous'),
+  (N'person1@example.com', N'person1');
+GO
+
+
+
+IF OBJECT_ID('Film') IS NOT NULL
+  DROP TABLE Film;
+
+
+CREATE TABLE Film(
+  id int NOT NULL IDENTITY(1, 1) PRIMARY KEY,
+  FilmName nvarchar(120) UNIQUE NOT NULL,
+  ProductionCo nvarchar(120) NOT NULL,
+  Country nvarchar(120) NULL,
+  Rating real NOT NULL DEFAULT 0,
+);
+GO
+
+
+INSERT INTO Film(FilmName, ProductionCo, Country) VALUES
+  (N'The Shawshank Redemption', N'Castle Rock Entertainment', N'USA'),
+  (N'The Godfather', N'Paramount Pictures', N'USA'),
+  (N'Il buono, il brutto, il cattivo', N' New Line Cinema', N'Italy'),
+  (N'The Lord of the Rings: The Return of the King', N' New Line Cinema', N'New Zeland'),
+  (N'Schindler''s List', N'Universal Pictures', N'USA');
+GO
+
+
+IF OBJECT_ID(N'Review') IS NOT NULL
+  DROP TABLE Review;
+GO
+
+
+CREATE TABLE Review(
+  UNID UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+  PostDate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  Rating real NULL CHECK (Rating > 0 AND Rating < 10),
+  Comment text NULL,
+  UserId int FOREIGN KEY REFERENCES [User](UserId),
+  FilmId int FOREIGN KEY REFERENCES [Film](id)
+);
+GO
+
+INSERT INTO Review(Rating, Comment, UserId, FilmId)
+VALUES
+  (7.5, N'I have never seen such an amazing film since I saw The Shawshank Redemption. Shawshank encompasses friendships, hardships, hopes, and dreams.', 1, 1),
+  (8.9, N'The reason I became a member of this database is because I finally found a movie ranking that recognized the true greatness of this movie.', 1, 1),
+  (9.9, N'I believe that this film is the best story ever told on film, and I''m about to tell you why.', 1, 1),
+
+  (8.9, N'This is without a doubt my all-time favorite western.', 1, 2),
+  (9.5, N'Westerns don''t get any better than this.', 1, 2),
+
+  (8.8, N'..but oh was I thankful for it!!! All through the movie I kept on having this big large smile sculpted into my face.', 1, 4),
+  (7.5, N'I think it is important to remember that Peter Jackson took up this film not in order just to make a film of ''The Lord of the Rings'' but because he wanted to make a ''fantasy just like the ''The Lord of the Rings'' as he himself put it.', 1, 4),
+
+  (4.5, 'i just watched this movie and i found it boring 3 hours for nothing this movie is just to make people feel sorry about the Jewish i want to say we must feel sorry about any human ..', 1, 5);
+GO
+
+IF OBJECT_ID(N'GetFilmRating') IS NOT NULL
+	DROP FUNCTION dbo.GetFilmRating;
+GO
+
+
+CREATE FUNCTION dbo.GetFilmRating
+  (@filmId AS int)
+  RETURNS real
+AS
+BEGIN
+  DECLARE @rating real;
+  SELECT @rating = AVG(Rating) FROM [Review]
+    WHERE FilmId = @filmId;
+  RETURN @rating;
+END;
+GO
+
+UPDATE dbo.[Film]
+    SET Rating = dbo.GetFilmRating(id)
+    WHERE id in 
+    (SELECT FilmId FROM [Review]);
+GO
+
+SELECT * FROM [Film];
+SELECT * FROM [User];
+SELECT * FROM [Review];
+GO
+
+
+-- update film avg rating after Review insert
+CREATE TRIGGER ReviewInsertTrig
+ON Review
+AFTER INSERT
+AS
+  UPDATE dbo.[Film]
+    SET Rating = dbo.GetFilmRating(id)
+    WHERE id in 
+    (SELECT FilmId FROM inserted);
+  GO
+GO
+
+
+CREATE TRIGGER ReviewUpdateTrig
+ON Review
+AFTER UPDATE
+AS
+BEGIN
+  IF UPDATE(PostDate)
+    RAISERROR (N'Unable to update review post date. Operation is not permited', 11, 1);
+
+  IF UPDATE(Rating)
+    UPDATE dbo.[Film]
+    SET Rating = dbo.GetFilmRating(id)
+    WHERE id in 
+    (SELECT FilmId FROM inserted);
+
+END;
+GO
+
+CREATE TRIGGER ReviewDeleteTrig
+ON Review
+AFTER DELETE
+AS
+  UPDATE dbo.[Film]
+    SET Rating = dbo.GetFilmRating(id)
+    WHERE id in 
+    (SELECT FilmId FROM deleted);
+GO
+
+
+------------
+
+IF OBJECT_ID(N'UsersReview') IS NOT NULL 
+  DROP VIEW UsersReview;
+GO
+
+CREATE VIEW UsersReview
+AS
+  SELECT 
+      u.Email AS UserEmail,
+      r.PostDate AS PostDate,
+      r.Comment AS UserComment,
+      r.Rating AS UserRating,
+      f.FilmName AS FilmName
+    FROM [User] u 
+    INNER JOIN [Review] r ON r.UserId = u.UserId
+    INNER JOIN [Film] f ON f.id = r.FilmId
+  ;
+GO
+
+IF OBJECT_ID(N'GetFilmIdByName') IS NOT NULL
+	DROP FUNCTION dbo.GetFilmIdByName;
+GO
+
+IF OBJECT_ID(N'GetUserIdByEmail') IS NOT NULL
+	DROP FUNCTION dbo.GetUserIdByEmail;
+GO
+
+
+CREATE FUNCTION dbo.GetFilmIdByName
+  (@filmName AS nvarchar(120))
+  RETURNS int
+AS
+BEGIN
+  DECLARE @filmId int;
+  SELECT @filmId=id FROM [Film] WHERE FilmName=@filmName;
+  RETURN @filmId;
+END;
+GO
+
+CREATE FUNCTION dbo.GetUserIdByEmail
+  (@email AS nvarchar(120))
+  RETURNS int
+AS
+BEGIN
+  DECLARE @usrId int;
+  SELECT @usrId=UserId FROM [User] WHERE Email=@email;
+  RETURN @usrId;
+END;
+GO
+
+CREATE TRIGGER UsrReviewIns
+ON [UsersReview]
+INSTEAD OF INSERT
+AS
+  IF NOT EXISTS(
+      SELECT * From [User] WHERE Email IN (
+        SELECT UserEmail FROM inserted
+    ))
+    RAISERROR(N'Insert operation failed. User with such emails are not exist.', 11, 2);
+  IF NOT EXISTS(
+      SELECT * From [Film] WHERE FilmName IN (
+        SELECT FilmName FROM inserted
+      )
+    )
+    RAISERROR(N'Insert operation failed. Films with such name are not exist.', 11, 2);
+  INSERT INTO [Review]
+    SELECT
+      UNID=NEWID(),
+      PostDate=CURRENT_TIMESTAMP,
+      UserRating AS Rating, 
+      UserComment AS Comment, 
+      dbo.GetUserIdByEmail(UserEmail) AS UserId,
+      dbo.GetFilmIdByName(FilmName) AS FilmId
+    FROM inserted;
+GO
+
+CREATE TRIGGER UsrReviewDel
+ON [UsersReview]
+INSTEAD OF DELETE
+AS
+  WITH DeletedKeyRaws (UserId, FilmId, PostDate)
+  AS (
+    SELECT 
+      dbo.GetUserIdByEmail(UserEmail) AS UserId,
+      dbo.GetFilmIdByName(FilmName) AS FilmId,
+      PostDate
+    FROM deleted
+  ) DELETE [Review] 
+      WHERE 
+    (dbo.Review.UserId IN (SELECT UserId FROM DeletedKeyRaws)
+      AND
+    dbo.Review.FilmId IN (SELECT FilmId FROM DeletedKeyRaws)
+      AND
+    dbo.Review.PostDate IN (SELECT PostDate FROM DeletedKeyRaws);
+GO
+
+-- CREATE TRIGGER UsrReviewUpd
+-- ON [UsersReview]
+-- INSTEAD OF UPDATE
+-- AS
+--   IF UPDATE(UserEmail) OR UPDATE(FilmName)
+--     RAISERROR(N'You cannot delete foreign key. Operation is not permited', 11, 3);
+
+--   WITH InsertedKeyRaws (UserId, FilmId, PostDate)
+--   AS (
+--     SELECT 
+--       dbo.GetUserIdByEmail(UserEmail) AS UserId,
+--       dbo.GetFilmIdByName(FilmName) AS FilmId,
+--       PostDate
+--     FROM inserted
+--   ) UPDATE [Review] 
+--   SET 
+--     [Review].Comment = [InsertedKeyRaws].UserComment,
+--     [Review].PostDate = 
+--     [Review].Rating = 
+--   FROM [InsertedKeyRaws];
+-- GO
+
+PRINT dbo.GetFilmRating(5);
+
+INSERT INTO [UsersReview] 
+  (UserEmail, UserComment, UserRating, FilmName)
+VALUES
+  (N'person1@example.com', N'Spielberg is now the Numero Uno director of schmaltzy cinema. I thought Saving Private Ryan was the ultimate good guys save the poor soul...', 3.8, N'Schindler''s List'),
+  (N'person1@example.com', N'This is honestly one of the most overrated films of all time. ', 5.8, N'Schindler''s List');
+GO
+
+
+SELECT * FROM [UsersReview];
+SELECT * FROM [Review];
+SELECT * FROM [Film];
+GO
+
+PRINT dbo.GetFilmRating(5);

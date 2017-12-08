@@ -103,7 +103,8 @@ IF OBJECT_ID(N'UserIdx') IS NOT NULL
 GO
 
 
-CREATE INDEX UserIdx ON [User] (Email, UserName);
+CREATE INDEX UserIdx ON [User] (Email, UserName)
+INCLUDE (RegistrationDate);
 GO
 
 

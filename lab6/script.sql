@@ -10,6 +10,8 @@ GO
 USE Lab6;
 GO
 
+------------ Point 1
+
 IF OBJECT_ID('Film') IS NOT NULL
   DROP TABLE Film;
 
@@ -73,7 +75,7 @@ SELECT IDENT_CURRENT('Film') AS 'IDENT_CURRENT',
 GO
 
 
----------------
+------------ Point 2
 
 
 ALTER TABLE Film ADD
@@ -98,7 +100,7 @@ SELECT * FROM Film;
 GO
 
 
----------------
+------------ Point 3
 
 IF OBJECT_ID(N'Review') IS NOT NULL
   DROP TABLE Review;
@@ -123,7 +125,7 @@ SELECT * FROM Review
 GO;
 
 
----------------
+------------ Point 4
 
 
 IF OBJECT_ID(N'UserIdSeq') IS NOT NULL
@@ -162,7 +164,7 @@ SELECT * FROM [User]
 GO
 
 
-------------------
+------------ Point 5
 
 
 IF OBJECT_ID(N'User') IS NOT NULL
