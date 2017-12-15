@@ -108,6 +108,7 @@ END;
 GO
 
 
+
 -- Task 1. Create triggers for table --
 
 CREATE TRIGGER ReviewInsertTrig
@@ -116,7 +117,7 @@ AFTER INSERT
 AS
   UPDATE dbo.[Film]
     SET Rating = dbo.GetFilmRating(id)
-    WHERE id in 
+    WHERE id in
     (SELECT FilmId FROM inserted);
   GO
 GO
@@ -130,7 +131,7 @@ BEGIN
   IF UPDATE(Rating)
     UPDATE dbo.[Film]
       SET Rating = dbo.GetFilmRating(id)
-      WHERE id in 
+      WHERE id in
       (SELECT FilmId FROM inserted);
 
 END;
@@ -164,16 +165,16 @@ INSERT INTO Film(FilmName, ProductionCo, Country) VALUES
 GO
 
 
-INSERT INTO Review(Rating, Comment, UserId, FilmId)
+INSERT INTO Review(PostDate, Rating, Comment, UserId, FilmId)
 VALUES
-  (7.5, N'I have never seen such an amazing film since I saw The Shawshank Redemption. Shawshank encompasses friendships, hardships, hopes, and dreams.', 1, 1),
-  (8.9, N'The reason I became a member of this database is because I finally found a movie ranking that recognized the true greatness of this movie.', 1, 1),
-  (9.9, N'I believe that this film is the best story ever told on film, and I''m about to tell you why.', 1, 1),
-  (8.9, N'This is without a doubt my all-time favorite western.', 1, 2),
-  (9.5, N'Westerns don''t get any better than this.', 1, 2),
-  (8.8, N'..but oh was I thankful for it!!! All through the movie I kept on having this big large smile sculpted into my face.', 1, 4),
-  (7.5, N'I think it is important to remember that Peter Jackson took up this film not in order just to make a film of ''The Lord of the Rings'' but because he wanted to make a ''fantasy just like the ''The Lord of the Rings'' as he himself put it.', 1, 4),
-  (4.5, 'i just watched this movie and i found it boring 3 hours for nothing this movie is just to make people feel sorry about the Jewish i want to say we must feel sorry about any human ..', 1, 5);
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 7.5, N'I have never seen such an amazing film since I saw The Shawshank Redemption. Shawshank encompasses friendships, hardships, hopes, and dreams.', 1, 1),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 8.9, N'The reason I became a member of this database is because I finally found a movie ranking that recognized the true greatness of this movie.', 1, 1),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 9.9, N'I believe that this film is the best story ever told on film, and I''m about to tell you why.', 1, 1),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 8.9, N'This is without a doubt my all-time favorite western.', 1, 2),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 9.5, N'Westerns don''t get any better than this.', 1, 2),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 8.8, N'..but oh was I thankful for it!!! All through the movie I kept on having this big large smile sculpted into my face.', 1, 4),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 7.5, N'I think it is important to remember that Peter Jackson took up this film not in order just to make a film of ''The Lord of the Rings'' but because he wanted to make a ''fantasy just like the ''The Lord of the Rings'' as he himself put it.', 1, 4),
+  (DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 4.5, 'i just watched this movie and i found it boring 3 hours for nothing this movie is just to make people feel sorry about the Jewish i want to say we must feel sorry about any human ..', 1, 5);
 GO
 
 SELECT * FROM [Review]
@@ -205,19 +206,19 @@ GO
 
 
 
-IF OBJECT_ID(N'UsersReview') IS NOT NULL 
+IF OBJECT_ID(N'UsersReview') IS NOT NULL
   DROP VIEW UsersReview;
 GO
 
 CREATE VIEW UsersReview
 AS
-  SELECT 
+  SELECT
       u.Email AS UserEmail,
       r.PostDate AS PostDate,
       r.Comment AS UserComment,
       r.Rating AS UserRating,
       f.FilmName AS FilmName
-    FROM [User] u 
+    FROM [User] u
     INNER JOIN [Review] r ON r.UserId = u.UserId
     INNER JOIN [Film] f ON f.id = r.FilmId
   ;
@@ -234,48 +235,49 @@ CREATE TRIGGER UsrReviewIns
 ON [UsersReview]
 INSTEAD OF INSERT
 AS
-  IF NOT EXISTS(
-      SELECT * From [User] WHERE Email IN (
-        SELECT UserEmail FROM inserted
-    ))
-    RAISERROR(N'Insert operation failed. User with such emails are not exist.', 11, 2);
-  IF NOT EXISTS(
-      SELECT * From [Film] WHERE FilmName IN (
-        SELECT FilmName FROM inserted
+  IF EXISTS(
+      SELECT * FROM inserted WHERE UserEmail NOT IN
+        (SELECT Email From [User])
       )
-    )
+    RAISERROR(N'Insert operation failed. Users with such emails are not exist.', 11, 2);
+  IF EXISTS(
+      SELECT * FROM inserted WHERE FilmName NOT IN
+        (SELECT FilmName From [User])
+      )
     RAISERROR(N'Insert operation failed. Films with such name are not exist.', 11, 2);
-  INSERT INTO [Review]
-    SELECT
-      UNID=NEWID(),
-      PostDate=CURRENT_TIMESTAMP,
-      UserRating AS Rating, 
-      UserComment AS Comment, 
-      dbo.GetUserIdByEmail(UserEmail) AS UserId,
-      dbo.GetFilmIdByName(FilmName) AS FilmId
-    FROM inserted;
+  ELSE
+    INSERT INTO [Review]
+      SELECT
+        UNID=NEWID(),
+        PostDate=CURRENT_TIMESTAMP,
+        UserRating AS Rating,
+        UserComment AS Comment,
+        dbo.GetUserIdByEmail(UserEmail) AS UserId,
+        dbo.GetFilmIdByName(FilmName) AS FilmId
+      FROM inserted;
 GO
+
 
 CREATE TRIGGER UsrReviewDel
 ON [UsersReview]
 INSTEAD OF DELETE
 AS
-  WITH DeletedKeyCols (UserId, FilmId, PostDate)
-  AS (
-    SELECT 
-      dbo.GetUserIdByEmail(UserEmail) AS UserId,
-      dbo.GetFilmIdByName(FilmName) AS FilmId,
-      PostDate
-    FROM deleted
-  ) DELETE FROM [Review] 
-      WHERE 
-    dbo.Review.UserId IN (SELECT UserId FROM DeletedKeyCols)
-      AND
-    dbo.Review.FilmId IN (SELECT FilmId FROM DeletedKeyCols)
-      AND
-    dbo.Review.PostDate IN (SELECT PostDate FROM DeletedKeyCols);
-  
+  WITH ReviewWithDeleted (UNID)
+    AS (
+      SELECT UNID
+      FROM deleted d
+        INNER JOIN [Review] r
+        ON
+          r.FilmId = dbo.GetFilmIdByName(d.FilmName)
+        AND 
+          r.UserId = dbo.GetUserIdByEmail(d.UserEmail)
+        AND
+          r.PostDate = d.PostDate
+  ) DELETE FROM [Review]
+      WHERE UNID IN
+      (SELECT UNID FROM ReviewWithDeleted);
 GO
+
 
 CREATE TRIGGER UsrReviewUpd
 ON [UsersReview]
@@ -284,26 +286,31 @@ AS
   IF UPDATE(UserEmail) OR UPDATE(FilmName)
     RAISERROR(N'You cannot delete foreign key. Operation is not permited', 11, 3);
 
-  WITH DeletedKeyRaws (UserId, FilmId, PostDate)
+  WITH ReviewWithInserted (UNID, UserComment, UserRating, PostDate)
   AS (
-    SELECT 
-      dbo.GetUserIdByEmail(UserEmail) AS UserId,
-      dbo.GetFilmIdByName(FilmName) AS FilmId,
-      PostDate
-    FROM deleted
+    SELECT
+      r.UNID AS UNID,
+      i.UserComment AS UserComment,
+      i.UserRating As UserRating,
+      i.PostDate AS PostDate
+    FROM inserted i
+      INNER JOIN [Review] r
+      ON (
+        r.FilmId = dbo.GetFilmIdByName(i.FilmName)
+      AND
+        r.UserId = dbo.GetUserIdByEmail(i.UserEmail)
+      AND
+        r.PostDate = i.PostDate)
   )
-  UPDATE [Review] 
-    SET 
-      [Review].Comment = inserted.UserComment,
-      [Review].PostDate = inserted.PostDate,
-      [Review].Rating = inserted.UserRating
-    FROM inserted
+  UPDATE [Review]
+    SET
+      [Review].Comment = ReviewWithInserted.UserComment,
+      [Review].PostDate = ReviewWithInserted.PostDate,
+      [Review].Rating = ReviewWithInserted.UserRating
+    FROM
+      ReviewWithInserted 
     WHERE 
-      ([Review].UserId IN (SELECT UserId FROM DeletedKeyRaws))
-    AND
-      ([Review].FilmId IN (SELECT FilmId FROM DeletedKeyRaws))
-    AND
-      ([Review].PostDate IN (SELECT PostDate FROM DeletedKeyRaws));
+      Review.UNID = ReviewWithInserted.UNID;
 GO
 
 
@@ -314,7 +321,7 @@ GO
 
 -- Test insert trigger
 
-INSERT INTO [UsersReview] 
+INSERT INTO [UsersReview]
   (UserEmail, UserComment, UserRating, FilmName)
 VALUES
   (N'person1@example.com', N'Spielberg is now the Numero Uno director of schmaltzy cinema. I thought Saving Private Ryan was the ultimate good guys save the poor soul...', 3.8, N'Schindler''s List'),
@@ -322,30 +329,31 @@ VALUES
 GO
 
 
-SELECT * FROM [UsersReview]
-SELECT * FROM [Review];
 SELECT * FROM [Film];
+SELECT * FROM [Review];
+SELECT * FROM [UsersReview];
+GO
+
+
+-- Test update trigger
+UPDATE [UsersReview]
+SET UserRating = UserRating - 1;
 GO
 
 
 
--- Test update trigger
-UPDATE [UsersReview]  
-SET UserRating = 10.0
-WHERE UserEmail='person1@example.com'
-
-SELECT * FROM [UsersReview]
 SELECT * FROM [Review];
-SELECT * FROM [Film];
+SELECT * FROM [UsersReview];
 GO
 
 
 -- Test delete trigger
 
 DELETE FROM [UsersReview]
-  WHERE FilmName = N'The Godfather';
+  WHERE UserRating < 7;
+GO
 
-SELECT * FROM [UsersReview]
-SELECT * FROM [Review];
 SELECT * FROM [Film];
+SELECT * FROM [UsersReview];
+SELECT * FROM [Review];
 GO
