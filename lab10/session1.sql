@@ -1,0 +1,92 @@
+USE Lab10;
+
+SELECT @@spid AS Session1Id;
+GO
+
+--------------------
+
+-- 1. dirty read: 
+
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+-- fix:
+-- SET TRANSACTION ISOLATION LEVEL READ COMMITED;
+GO
+
+BEGIN TRAN;
+
+SELECT Email, UserName FROM [User];
+
+COMMIT TRAN;
+GO
+
+WAITFOR DELAY '00:00:10';
+
+SELECT Email, UserName FROM [User];
+GO
+
+
+--------------------
+
+-- 2. non-repeatable read
+
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+-- fix:
+-- SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+GO
+
+BEGIN TRAN;
+
+SELECT Email, UserName FROM [User];
+GO
+
+WAITFOR DELAY '00:00:10';
+
+SELECT Email, UserName FROM [User];
+GO
+
+COMMIT TRAN;
+
+
+--------------------
+
+-- 3. phantom read
+
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+-- fix:
+-- SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+GO
+
+BEGIN TRAN;
+
+SELECT Email, UserName FROM [User];
+GO
+
+WAITFOR DELAY '00:00:10';
+
+SELECT Email, UserName FROM [User];
+GO
+
+COMMIT TRAN;
+
+
+--------------------
+
+-- 4. snapshot
+ALTER DATABASE Lab10
+SET ALLOW_SNAPSHOT_ISOLATION ON;
+GO
+
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+GO
+
+BEGIN TRAN;
+
+SELECT Email, UserName FROM [User];
+GO
+
+WAITFOR DELAY '00:00:10';
+
+SELECT Email, UserName FROM [User];
+GO
+
+COMMIT TRAN;
