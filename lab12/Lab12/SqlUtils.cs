@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Data.Common;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Lab12
 {
@@ -79,7 +75,7 @@ namespace Lab12
             DbCommand cmd = df.CreateCommand();
             cmd.CommandText = query;
             cmd.Connection = Connection;
-            Console.WriteLine("Records affected {0}", cmd.ExecuteNonQuery());
+            Console.WriteLine("#INFO: {0} records affected", cmd.ExecuteNonQuery());
         }
 
         public void ExecuteDelete(string tableName, string condition=null)

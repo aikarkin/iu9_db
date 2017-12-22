@@ -13,81 +13,136 @@ namespace Lab12
 {
     class Program
     {
+        static void PrintTable(DataTable table) {
+            Console.WriteLine(table.TableName + ": ");
+
+            List<object> items = new List<object>();
+            foreach (DataRow row in table.Rows)
+            {
+                List<string> values = new List<string>();
+                foreach (var value in row.ItemArray)
+                {
+                    values.Add(value.ToString());
+                }
+                items.Add($"{{ {String.Join(", ", values)} }}");
+            }
+
+            Console.WriteLine(String.Join(",\n", items) + "\n");
+        }
+
         static void Main(string[] args)
         {
             SqlUtils utils = new SqlUtils();
 
             // inconsistent data model
-            //utils.PrintSelect("[User]", new string[] { "Email", "UserName" });
-            //Console.WriteLine();
 
-            //utils.ExecuteDelete("[User]");
-            //Console.WriteLine();
+            Console.WriteLine("Inconsistent data model");
 
-            //utils.PrintSelect("[User]", new string[] { "Email", "UserName" });
-            //Console.WriteLine();
+            utils.PrintSelect("[User]", new string[] { "Email", "UserName" });
+            Console.WriteLine();
 
-            //utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person2@example.com'", "N'person2'" });
-            //utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person3@example.com'", "N'person3'" });
-            //Console.WriteLine();
+            utils.ExecuteDelete("[User]");
+            Console.WriteLine();
 
-            //utils.PrintSelect("[User]", new string[] { "Email", "UserName", "About" });
-            //Console.WriteLine();
+            utils.PrintSelect("[User]", new string[] { "Email", "UserName" });
+            Console.WriteLine();
 
-            //utils.ExecuteUpdate("[User]", new string[] { "About" }, new string[] { "N'student'" }, "UserName LIKE 'person%'");
-            //Console.WriteLine();
+            utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person1@example.com'", "N'person1'" });
+            utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person2@example.ru'", "N'person2'" });
+            utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person3@example.com'", "N'person3'" });
+            utils.ExecuteInsert("[User]", new string[] { "Email", "UserName" }, new string[] { "N'person4@example.ru'", "N'person4'" });
+            Console.WriteLine();
 
-            //utils.PrintSelect("[User]", new string[] { "Email", "UserName", "About" });
+            utils.PrintSelect("[User]", new string[] { "Email", "UserName", "About" });
+            Console.WriteLine();
+
+            utils.ExecuteUpdate("[User]", new string[] { "About" }, new string[] { "N'student'" }, "UserName LIKE 'person%'");
+            Console.WriteLine();
+
+            utils.PrintSelect("[User]", new string[] { "Email", "UserName", "About" });
+
 
             // consistent data model
+            Console.WriteLine(new String('#', 30));
+            Console.WriteLine("Consistent data model");
+
             SqlConnection sqlConn = (SqlConnection)utils.Connection;
 
             SqlDataAdapter userAdapter = new SqlDataAdapter("SELECT * FROM dbo.[User];", sqlConn);
-            SqlDataAdapter filmAdapter = new SqlDataAdapter("SELECT * FROM dbo.[Film];", sqlConn);
-
             DataSet dataSet = new DataSet();
 
+            SqlCommand usrIns = new SqlCommand("INSERT INTO [User] (Email, UserName) VALUES (@Email, @UserName)", sqlConn);
+            SqlCommand usrUpd = new SqlCommand("UPDATE [User] SET Email=@Email, UserName=@UserName, About=@About WHERE UserId=@UserId", sqlConn);
+            SqlCommand usrDel = new SqlCommand("DELETE FROM [User] WHERE UserId=@UserId", sqlConn);
+
+            usrUpd.Parameters.Add("@Email", SqlDbType.NVarChar, 120, "Email");
+            usrUpd.Parameters.Add("@UserName", SqlDbType.NVarChar, 120, "UserName");
+            usrUpd.Parameters.Add("@About", SqlDbType.Text, 0, "About");
+            usrUpd.Parameters.Add("@UserId", SqlDbType.Int, 120, "UserId");
+
+            usrIns.Parameters.Add("@Email", SqlDbType.NVarChar, 120, "Email");
+            usrIns.Parameters.Add("@UserName", SqlDbType.NVarChar, 120, "UserName");
+
+            usrDel.Parameters.Add("@UserId", SqlDbType.Int, 0, "UserId");
+
+            userAdapter.InsertCommand = usrIns;
+            userAdapter.UpdateCommand = usrUpd;
+            userAdapter.DeleteCommand = usrDel;
+
             userAdapter.Fill(dataSet, "User");
-            filmAdapter.Fill(dataSet, "Film");
-
-            // print tables' content
-            foreach (DataTable table in dataSet.Tables)
-            {
-                Console.WriteLine(table.TableName + ": ");
-
-                List<object> items = new List<object>();
-                foreach (DataRow row in table.Rows)
-                {
-                    List<string> values = new List<string>();
-                    foreach (var value in row.ItemArray)
-                    {
-                        values.Add(value.ToString());
-                    }
-                    items.Add($"{{ {String.Join(", ", values)} }}");
-                }
-
-                Console.WriteLine(String.Join(",\n", items) + "\n");
-            }
-
-            // insert row
-            Console.WriteLine("Row states: ");
             DataTable users = dataSet.Tables["User"];
 
-            DataRow nRow = users.NewRow();
-            Console.WriteLine(nRow.RowState);
+            // print table content 
+            PrintTable(users);
 
-            users.Rows.Add(nRow);
-            Console.WriteLine(nRow.RowState);
+            // modify rows
+            foreach(DataRow ur in users.Rows)
+            {
+                string name = (String)ur["UserName"];
+                if(name.Contains("person"))
+                {
+                    ur["About"] = "employee";
+                }
+            }
 
-            users.AcceptChanges();
-            Console.WriteLine(nRow.RowState);
+            Console.WriteLine("#INFO: Users after modify:");
+            PrintTable(users);
 
-            nRow["UserName"] = "alex";
-            Console.WriteLine(nRow.RowState);
+            // del row
 
-            // remove row
-            nRow.Delete();
-            Console.WriteLine(nRow.RowState);
+            Console.WriteLine("#INFO: Delete rows from dataset");
+            object usrPk = 1;
+            DataRow[] foundRows = users.Select("Email LIKE '%@example.com'");
+
+            if(foundRows != null && foundRows.Length > 0)
+            {
+                Console.WriteLine("#INFO: Found {0} entries matching search criteria", foundRows.Length);
+                foreach (DataRow ur in foundRows)
+                {
+                    ur.Delete();
+                }
+            }
+
+            userAdapter.Update(dataSet, "User");
+
+            Console.WriteLine("#INFO: Users after delete:");
+            PrintTable(users);
+
+            // add row
+            DataRow row = users.NewRow();
+
+            row["UserName"] = "alex";
+            row["Email"] = "alex@bmstu.ru";
+
+            users.Rows.Add(row);
+
+            Console.WriteLine("#INFO: Users after add:");
+            PrintTable(users);
+
+            userAdapter.Update(dataSet, "User");
+
+            Console.WriteLine("#INFO: Table content after all operations:");
+            utils.PrintSelect("[User]", new string[] { "Email", "UserName", "About" });
         }
     }
 }
