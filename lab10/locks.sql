@@ -1,9 +1,6 @@
 use Lab10;
  
  
-WAITFOR DELAY '00:00:05';
-GO
- 
 SELECT
     resource_type,
     resource_subtype, 
@@ -16,7 +13,7 @@ SELECT
 FROM sys.dm_tran_locks;
 GO
  
-WAITFOR DELAY '00:00:10';
+WAITFOR DELAY '00:00:05';
 GO
  
 SELECT

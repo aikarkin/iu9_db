@@ -40,3 +40,7 @@ INSERT INTO Film(FilmName, ProductionCo, Country) VALUES
   (N'The Lord of the Rings: The Return of the King', N' New Line Cinema', N'New Zeland'),
   (N'Schindler''s List', N'Universal Pictures', N'USA');
 GO
+
+
+USE Lab12;
+SELECT * FROM [User];
