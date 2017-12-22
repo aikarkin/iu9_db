@@ -48,22 +48,22 @@ namespace Lab12
 
             for (int i = 0; i < dbReader.FieldCount; i++)
             {
-                Console.Write(dbReader.GetName(i) + ",\t");
+                Console.Write($"{dbReader.GetName(i), 20}");
             }
 
             Console.WriteLine();
-            Console.WriteLine(new String('_', 30));
+            Console.WriteLine(new String('_', 60));
 
             while (dbReader.Read())
             {
                 for (int i = 0; i < dbReader.FieldCount; i++)
                 {
-                    Console.Write(dbReader[i] + ",\t");
+                    Console.Write($"{dbReader[i], 20}");
                 }
                 Console.WriteLine();
             }
 
-            Console.WriteLine(new String('_', 30));
+            Console.WriteLine(new String('_', 60));
 
             dbReader.Close();
         }
@@ -75,7 +75,7 @@ namespace Lab12
             DbCommand cmd = df.CreateCommand();
             cmd.CommandText = query;
             cmd.Connection = Connection;
-            Console.WriteLine("#INFO: {0} records affected", cmd.ExecuteNonQuery());
+            Console.WriteLine("#INFO: {0} record(s) affected", cmd.ExecuteNonQuery());
         }
 
         public void ExecuteDelete(string tableName, string condition=null)

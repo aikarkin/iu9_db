@@ -14,20 +14,21 @@ namespace Lab12
     class Program
     {
         static void PrintTable(DataTable table) {
-            Console.WriteLine(table.TableName + ": ");
+            Console.WriteLine($"{table.TableName} (consistent)");
+            Console.WriteLine(new String('_', 80));
 
-            List<object> items = new List<object>();
             foreach (DataRow row in table.Rows)
             {
-                List<string> values = new List<string>();
                 foreach (var value in row.ItemArray)
                 {
-                    values.Add(value.ToString());
+                    string valStr = value.ToString();
+                    Console.Write($"{valStr},\t");
                 }
-                items.Add($"{{ {String.Join(", ", values)} }}");
+                Console.WriteLine();
             }
 
-            Console.WriteLine(String.Join(",\n", items) + "\n");
+            Console.WriteLine(new String('_', 80));
+
         }
 
         static void Main(string[] args)
