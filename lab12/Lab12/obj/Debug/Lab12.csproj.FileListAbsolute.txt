@@ -1,0 +1,7 @@
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\bin\Debug\Lab12.exe.config
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\bin\Debug\Lab12.exe
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\bin\Debug\Lab12.pdb
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\obj\Debug\Lab12.csprojResolveAssemblyReference.cache
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\obj\Debug\Lab12.csproj.CoreCompileInputs.cache
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\obj\Debug\Lab12.exe
+C:\Users\alex\Documents\db\labs\lab12\Lab12\Lab12\obj\Debug\Lab12.pdb
