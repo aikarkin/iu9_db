@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Configuration;
 using System.Data.Common;
-
+using System.Data.SqlClient;
+using System.IO;
 
 namespace Lab12
 {
@@ -13,24 +14,44 @@ namespace Lab12
 
         public SqlUtils()
         {
-            this.connStr = ConfigurationManager.ConnectionStrings["linuxMsSqlServer"];
-            this.df = DbProviderFactories.GetFactory(this.connStr.ProviderName);
+            try { 
+                this.connStr = ConfigurationManager.ConnectionStrings["linuxMsSqlServer"];
+                this.df = DbProviderFactories.GetFactory(this.connStr.ProviderName);
+            } catch(ConfigurationErrorsException ce)
+            {
+                Console.WriteLine("#ERROR: Unnable to read configuration");
+                Console.WriteLine("#Couse: " + ce.BareMessage);
+            }
         }
 
         public void Dispose()
         {
-            this.conn.Close();
+            if (conn != null)
+            {
+                this.conn.Close();
+            }
         }
 
         public DbConnection Connection
         {
             get
             {
-                if (conn == null)
+                if (connStr != null && connStr.ConnectionString != null && conn == null)
                 {
-                    conn = df.CreateConnection();
-                    conn.ConnectionString = connStr.ConnectionString;
-                    conn.Open();
+                    try
+                    {
+                        conn = df.CreateConnection();
+                        conn.ConnectionString = connStr.ConnectionString;
+                        conn.Open();
+                    } catch(InvalidOperationException ioe) 
+                    {
+                        Console.WriteLine("#ERROR: Unnable to open connection. Data source is not specified or connections is already opened");
+                        Console.WriteLine("##ERROR MESSAGE: " + ioe.Message);
+                    } catch(System.Data.SqlClient.SqlException se) 
+                    {
+                        Console.WriteLine("#ERROR: Connection error");
+                        Console.WriteLine("#ERROR MESSAGE: " + se.Message);
+                    }
                 }
                 return conn;
             }
@@ -38,44 +59,62 @@ namespace Lab12
 
         public void PrintSelect(string tableName, string[] columnNames)
         {
-            string query = $"SELECT {String.Join(", ", columnNames)} FROM {tableName}";
-            Console.WriteLine($"#INFO: execute query \"{query}\"");
-            DbCommand selectCmd = df.CreateCommand();
-            selectCmd.Connection = Connection;
-            selectCmd.CommandText = query;
-
-            DbDataReader dbReader = selectCmd.ExecuteReader();
-
-            for (int i = 0; i < dbReader.FieldCount; i++)
+            try
             {
-                Console.Write($"{dbReader.GetName(i), 20}");
-            }
+                string query = $"SELECT {String.Join(", ", columnNames)} FROM {tableName}";
+                Console.WriteLine($"#INFO: execute query \"{query}\"");
+                DbCommand selectCmd = df.CreateCommand();
+                selectCmd.Connection = Connection;
+                selectCmd.CommandText = query;
 
-            Console.WriteLine();
-            Console.WriteLine(new String('_', 60));
+                DbDataReader dbReader = selectCmd.ExecuteReader();
 
-            while (dbReader.Read())
-            {
                 for (int i = 0; i < dbReader.FieldCount; i++)
                 {
-                    Console.Write($"{dbReader[i], 20}");
+                    Console.Write($"{dbReader.GetName(i),20}");
                 }
+
                 Console.WriteLine();
-            }
+                Console.WriteLine(new String('_', 60));
 
-            Console.WriteLine(new String('_', 60));
+                while (dbReader.Read())
+                {
+                    for (int i = 0; i < dbReader.FieldCount; i++)
+                    {
+                        Console.Write($"{dbReader[i],20}");
+                    }
+                    Console.WriteLine();
+                }
 
-            dbReader.Close();
+                Console.WriteLine(new String('_', 60));
+
+                dbReader.Close();
+            } catch (SqlException sqlEx)
+            {
+                Console.WriteLine("#ERROR: An error occured while executing select: ");
+                Console.WriteLine("#ERROR MESSAGE: " + sqlEx.Message);
+            } 
         }
 
 
         private void ExecudeNonQuery(string query)
         {
-            Console.WriteLine("#INFO: execute query \"{0}\"", query);
-            DbCommand cmd = df.CreateCommand();
-            cmd.CommandText = query;
-            cmd.Connection = Connection;
-            Console.WriteLine("#INFO: {0} record(s) affected", cmd.ExecuteNonQuery());
+            try
+            {
+                Console.WriteLine("#INFO: execute query \"{0}\"", query);
+                DbCommand cmd = df.CreateCommand();
+                cmd.CommandText = query;
+                cmd.Connection = Connection;
+                Console.WriteLine("#INFO: {0} record(s) affected", cmd.ExecuteNonQuery());
+            } catch(SqlException se)
+            {
+                Console.WriteLine("#ERROR: Unnable to execute non-query command." );
+                Console.WriteLine("#ERROR MESSAGE: " + se.Message);
+            } catch(IOException ioEx)
+            {
+                Console.WriteLine("#ERROR: Unnable to execute non-query command. An error can be occured while data transferred");
+                Console.WriteLine("#ERROR MESSAGE: " + ioEx.Message);
+            }
         }
 
         public void ExecuteDelete(string tableName, string condition=null)

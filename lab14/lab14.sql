@@ -8,7 +8,7 @@ GO
 CREATE DATABASE Users1
     ON ( NAME = Users_dat1, FILENAME = '/home/alex/dev/iu9/db/data/lab14_users_dad1.mdf',
             SIZE = 10, MAXSIZE = UNLIMITED, FILEGROWTH = 5% ) 
-    LOG ON ( NAME = Hotels_log1, FILENAME = '/home/alex/dev/iu9/db/data/lab14_users_log1.ldf',
+    LOG ON ( NAME = Users_log1, FILENAME = '/home/alex/dev/iu9/db/data/lab14_users_log1.ldf',
             SIZE = 5MB, MAXSIZE = 25MB, FILEGROWTH = 5MB );
 GO
 
@@ -46,6 +46,9 @@ INSERT INTO [User]
   (3, DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 8.9, 'user'),
   (4, DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0), 2.14, 'user');
  
+
+
+
 USE Users2;
  
 IF OBJECT_ID(N'User') IS NOT NULL
@@ -101,7 +104,7 @@ AS
 
   DELETE FROM [Users2].[dbo].[User] 
     WHERE UserId IN (SELECT UserId FROM deleted);
-GO
+GO 
 
 
 IF OBJECT_ID(N'UsrViewIns') IS NOT NULL
@@ -161,3 +164,4 @@ DELETE FROM [UsrView]
   WHERE Activity <= 6;
 
 SELECT * FROM [UsrView];
+Go

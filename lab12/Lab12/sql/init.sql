@@ -44,3 +44,30 @@ GO
 
 USE Lab12;
 SELECT * FROM [User];
+
+
+IF OBJECT_ID(N'InsertUser') IS NOT NULL
+  DROP PROCEDURE InsertUser;
+GO
+
+
+CREATE PROCEDURE [dbo].[InsertUser]
+    @email nvarchar(120),
+    @name nvarchar(120),
+    @out_id int OUTPUT
+AS
+BEGIN
+  INSERT INTO [User](Email, UserName) VALUES (@email, @name);
+  SET @out_id =  SCOPE_IDENTITY();
+  RETURN @out_id;
+END;
+Go
+
+-- DECLARE @insId INT;
+
+-- SET @insId = 0;
+
+-- EXEC [dbo].[InsertUser] N'student1@bmstu.ru', N'Student', @out_id=@insId OUTPUT;
+
+SELECT * FROM [User];
+-- PRINT @insId;
